@@ -10,6 +10,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Materialize env.txt from .env.example
+        run: cp .env.example env.txt
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Flutter Web
+        run: flutter build web --release
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:

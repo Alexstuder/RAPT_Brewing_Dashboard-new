@@ -1,6 +1,0 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: sans-serif; background: #1a1a2e; color: #eee; padding: 2rem; }
-h1 { font-size: 1.8rem; margin-bottom: 1.5rem; }
-#stats { display: flex; gap: 1rem; margin-bottom: 2rem; }
-.card { background: #16213e; border-radius: 8px; padding: 1rem 1.5rem; flex: 1; font-size: 1.1rem; }
-canvas { background: #16213e; border-radius: 8px; padding: 1rem; width: 100%; }
