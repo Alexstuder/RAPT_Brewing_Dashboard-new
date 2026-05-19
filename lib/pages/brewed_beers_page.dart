@@ -31,6 +31,9 @@ class _BrewedBeersPageState extends ConsumerState<BrewedBeersPage> {
     try {
       final repo = ref.read(raptRepositoryProvider);
       final list = await repo.fetchBrewSessions();
+      // Server sortiert nach start_date; client-side nach effectiveStart
+      // sortieren damit Custom-Dates die Reihenfolge bestimmen.
+      list.sort((a, b) => b.effectiveStart.compareTo(a.effectiveStart));
       if (!mounted) return;
       setState(() {
         _sessions = list;
@@ -81,27 +84,53 @@ class _BrewedBeersPageState extends ConsumerState<BrewedBeersPage> {
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, i) {
                         final s = _sessions[i];
-                        final start = DateFormat('dd.MM.yyyy').format(s.startDate);
-                        final end = DateFormat('dd.MM.yyyy').format(s.endDate);
-                        final days = s.endDate.difference(s.startDate).inDays;
+                        final df = DateFormat('dd.MM.yyyy HH:mm');
+                        final start = df.format(s.effectiveStart.toLocal());
+                        final end = df.format(s.effectiveEnd.toLocal());
+                        final dur = s.effectiveEnd.difference(s.effectiveStart);
+                        final days = dur.inDays;
+                        final hours = dur.inHours % 24;
+                        final durStr = days > 0 ? '${days}d ${hours}h' : '${dur.inHours}h';
+                        final hasCustom = s.customStartDate != null || s.customEndDate != null;
                         return Card(
                           color: const Color(0xFF0F172A),
                           child: ListTile(
-                            title: Text(s.name,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold)),
-                            subtitle: Text('$start  →  $end  ($days Tage)',
+                            title: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(s.name,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                                if (hasCustom)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text('custom',
+                                        style: TextStyle(color: Colors.amber, fontSize: 10)),
+                                  ),
+                              ],
+                            ),
+                            subtitle: Text('$start  →  $end  ($durStr)',
                                 style: const TextStyle(color: Colors.white60)),
                             trailing: const Icon(Icons.arrow_forward_ios,
                                 size: 16, color: Colors.white38),
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    BrewSessionDetailsPage(session: s),
-                              ),
-                            ),
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      BrewSessionDetailsPage(session: s),
+                                ),
+                              );
+                              // Liste neu laden, weil sich custom_*_date in der
+                              // Detail-Page geändert haben könnte.
+                              if (mounted) _load();
+                            },
                           ),
                         );
                       },
