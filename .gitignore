@@ -47,4 +47,3 @@ app.*.map.json
 
 # Runtime env (not committed, materialized from .env.example)
 .env
-env.txt
