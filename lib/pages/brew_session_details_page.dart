@@ -86,18 +86,20 @@ class _BrewSessionDetailsPageState
   }
 
   Future<DateTime?> _pickDateTime(DateTime initial, DateTime first) async {
+    final localInitial = initial.toLocal();
     final d = await showDatePicker(
       context: context,
-      initialDate: initial,
-      firstDate: first,
+      initialDate: localInitial,
+      firstDate: first.toLocal(),
       lastDate: DateTime.now(),
     );
     if (d == null || !mounted) return null;
     final t = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(initial),
+      initialTime: TimeOfDay.fromDateTime(localInitial),
     );
     if (t == null) return null;
+    // Lokale Zeit zusammenbauen — Speicherung erfolgt UTC-konvertiert im Repository.
     return DateTime(d.year, d.month, d.day, t.hour, t.minute);
   }
 
@@ -195,14 +197,14 @@ class _BrewSessionDetailsPageState
                           OutlinedButton.icon(
                             icon: const Icon(Icons.calendar_today, size: 16),
                             label: Text(_pickedStart != null
-                                ? DateFormat('dd.MM.yyyy HH:mm').format(_pickedStart!)
+                                ? DateFormat('dd.MM.yyyy HH:mm').format(_pickedStart!.toLocal())
                                 : 'Start wählen…'),
                             onPressed: _pickStart,
                           ),
                           OutlinedButton.icon(
                             icon: const Icon(Icons.calendar_today, size: 16),
                             label: Text(_pickedEnd != null
-                                ? DateFormat('dd.MM.yyyy HH:mm').format(_pickedEnd!)
+                                ? DateFormat('dd.MM.yyyy HH:mm').format(_pickedEnd!.toLocal())
                                 : 'Ende wählen…'),
                             onPressed: _pickEnd,
                           ),
