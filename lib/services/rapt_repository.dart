@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/brew_session.dart';
+import '../utils/telemetry_processor.dart';
 
 /// Backend-First Repository: liest aus dem `rapt` Schema in Supabase.
 /// brew-proxy synced RAPT-API → Postgres periodisch; diese App liest nur (+
@@ -91,6 +92,34 @@ class RaptRepository {
     return (rows as List)
         .map((r) => HydrometerTelemetryPoint.fromJson(r as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Mergt Controller- und Hydrometer-Telemetrie zu vereinheitlichten
+  /// Datenpunkten (chronologisch sortiert), wie sie der TelemetryProcessor /
+  /// die RaptTelemetryView erwartet.
+  Future<List<UnifiedTelemetryPoint>> fetchUnifiedTelemetry({
+    required String profileId,
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final ctrl = await fetchControllerTelemetry(profileId: profileId, from: from, to: to);
+    final hyd = await fetchHydrometerTelemetry(from: from, to: to);
+    final unified = <UnifiedTelemetryPoint>[
+      for (final c in ctrl)
+        UnifiedTelemetryPoint(
+          createdOn: c.ts,
+          temperature: c.temperature,
+          targetTemperature: c.targetTemperature,
+        ),
+      for (final h in hyd)
+        UnifiedTelemetryPoint(
+          createdOn: h.ts,
+          temperature: h.temperature,
+          gravity: h.gravity,
+          battery: h.battery,
+        ),
+    ]..sort((a, b) => a.createdOn.compareTo(b.createdOn));
+    return unified;
   }
 
   // ---------------------------------------------------------------------------
