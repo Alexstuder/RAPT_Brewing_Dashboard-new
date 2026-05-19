@@ -1,51 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:rapt_brewing_dashboard/features/dashboard/repositories/rapt_repository.dart';
-import 'package:rapt_brewing_dashboard/features/dashboard/models/brew_session.dart';
-import 'package:isar/isar.dart';
+
+import '../models/brew_session.dart';
+import '../services/rapt_repository.dart';
 import 'brew_session_details_page.dart';
 
 class BrewedBeersPage extends ConsumerStatefulWidget {
   const BrewedBeersPage({super.key});
-
   @override
   ConsumerState<BrewedBeersPage> createState() => _BrewedBeersPageState();
 }
 
 class _BrewedBeersPageState extends ConsumerState<BrewedBeersPage> {
-  bool _isLoading = true;
+  bool _loading = true;
+  String? _error;
   List<BrewSession> _sessions = [];
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _load();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      final repo = await ref.read(raptRepositoryProvider.future);
-      final isar = repo.isar;
-
-      // Lese direkt die persistierten Sude aus der DB
-      final sessions = await isar.brewSessions
-          .where()
-          .sortByStartDateDesc()
-          .findAll();
-
+      final repo = ref.read(raptRepositoryProvider);
+      final list = await repo.fetchBrewSessions();
+      if (!mounted) return;
       setState(() {
-        _sessions = sessions;
+        _sessions = list;
+        _loading = false;
       });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler beim Laden der Sude: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _loading = false;
+      });
     }
   }
 
@@ -58,97 +54,58 @@ class _BrewedBeersPageState extends ConsumerState<BrewedBeersPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
       ),
-      body: _isLoading
+      body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _sessions.isEmpty
-              ? const Center(
-                  child: Text(
-                    'Keine Braudaten mit Profilen gefunden.',
-                    style: TextStyle(color: Colors.white54),
+          : _error != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text('Fehler: $_error',
+                        style: const TextStyle(color: Colors.redAccent)),
                   ),
                 )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A).withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white10),
-                    ),
-                    child: DataTable(
-                      showCheckboxColumn: false,
-                      columnSpacing: 20,
-                      headingTextStyle: const TextStyle(
-                        color: Colors.blueAccent,
-                        fontWeight: FontWeight.bold,
+              : _sessions.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Noch keine Sude in der Datenbank.\nbrew-proxy synct alle 5 Min.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white54),
                       ),
-                      dataTextStyle: const TextStyle(color: Colors.white70, fontSize: 13),
-                      columns: const [
-                        DataColumn(label: Text('Name')),
-                        DataColumn(label: Text('Startdatum')),
-                        DataColumn(label: Text('Enddatum')),
-                      ],
-                      rows: _sessions.map((s) {
-                        return DataRow(
-                          onSelectChanged: (selected) {
-                            if (selected != null && selected) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => BrewSessionDetailsPage(session: s),
-                                ),
-                              ).then((_) => _loadData());
-                            }
-                          },
-                          cells: [
-                            DataCell(
-                              Container(
-                                constraints: const BoxConstraints(maxWidth: 180),
-                                child: Text(
-                                  s.name,
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _sessions.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) {
+                        final s = _sessions[i];
+                        final start = DateFormat('dd.MM.yyyy').format(s.startDate);
+                        final end = DateFormat('dd.MM.yyyy').format(s.endDate);
+                        final days = s.endDate.difference(s.startDate).inDays;
+                        return Card(
+                          color: const Color(0xFF0F172A),
+                          child: ListTile(
+                            title: Text(s.name,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
+                            subtitle: Text('$start  →  $end  ($days Tage)',
+                                style: const TextStyle(color: Colors.white60)),
+                            trailing: const Icon(Icons.arrow_forward_ios,
+                                size: 16, color: Colors.white38),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    BrewSessionDetailsPage(session: s),
                               ),
                             ),
-                            DataCell(
-                              Row(
-                                children: [
-                                  if (s.customStartDate != null)
-                                    const Padding(
-                                      padding: EdgeInsets.only(right: 4),
-                                      child: Icon(Icons.calendar_today, size: 10, color: Colors.blueAccent),
-                                    ),
-                                  Text(
-                                    DateFormat('dd.MM.yy HH:mm').format(s.customStartDate ?? s.startDate),
-                                    style: TextStyle(
-                                      color: s.customStartDate != null ? Colors.blueAccent : Colors.white70,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                DateFormat('dd.MM.yy HH:mm').format(s.customEndDate ?? s.endDate),
-                                style: TextStyle(
-                                  color: s.customEndDate != null ? Colors.blueAccent : Colors.white70,
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         );
-                      }).toList(),
+                      },
                     ),
-                  ),
-                ),
     );
   }
 }
-
