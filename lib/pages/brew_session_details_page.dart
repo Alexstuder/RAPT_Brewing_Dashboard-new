@@ -63,31 +63,37 @@ class _BrewSessionDetailsPageState
     }
   }
 
-  Future<void> _pickStart() async {
+  Future<DateTime?> _pickDateTime(DateTime initial, DateTime first) async {
     final d = await showDatePicker(
       context: context,
-      initialDate: _from,
-      firstDate: DateTime(2010),
+      initialDate: initial,
+      firstDate: first,
       lastDate: DateTime.now(),
     );
-    if (d == null) return;
+    if (d == null || !mounted) return null;
+    final t = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (t == null) return null;
+    return DateTime(d.year, d.month, d.day, t.hour, t.minute);
+  }
+
+  Future<void> _pickStart() async {
+    final dt = await _pickDateTime(_from, DateTime(2010));
+    if (dt == null) return;
     setState(() {
-      _pickedStart = d;
-      _from = d;
+      _pickedStart = dt;
+      _from = dt;
     });
   }
 
   Future<void> _pickEnd() async {
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _to,
-      firstDate: _from,
-      lastDate: DateTime.now(),
-    );
-    if (d == null) return;
+    final dt = await _pickDateTime(_to, _from);
+    if (dt == null) return;
     setState(() {
-      _pickedEnd = d;
-      _to = d;
+      _pickedEnd = dt;
+      _to = dt;
     });
   }
 
@@ -173,14 +179,14 @@ class _BrewSessionDetailsPageState
                           OutlinedButton.icon(
                             icon: const Icon(Icons.calendar_today, size: 16),
                             label: Text(_pickedStart != null
-                                ? DateFormat('dd.MM.yyyy').format(_pickedStart!)
+                                ? DateFormat('dd.MM.yyyy HH:mm').format(_pickedStart!)
                                 : 'Start wählen…'),
                             onPressed: _pickStart,
                           ),
                           OutlinedButton.icon(
                             icon: const Icon(Icons.calendar_today, size: 16),
                             label: Text(_pickedEnd != null
-                                ? DateFormat('dd.MM.yyyy').format(_pickedEnd!)
+                                ? DateFormat('dd.MM.yyyy HH:mm').format(_pickedEnd!)
                                 : 'Ende wählen…'),
                             onPressed: _pickEnd,
                           ),
