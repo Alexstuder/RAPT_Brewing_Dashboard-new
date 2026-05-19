@@ -22,6 +22,7 @@ class _BrewSessionDetailsPageState
   String? _error;
   List<UnifiedTelemetryPoint> _points = [];
 
+  late BrewSession _session;
   late DateTime _from;
   late DateTime _to;
   DateTime? _pickedStart;
@@ -30,11 +31,32 @@ class _BrewSessionDetailsPageState
   @override
   void initState() {
     super.initState();
-    _from = widget.session.effectiveStart;
-    _to = widget.session.effectiveEnd;
-    _pickedStart = widget.session.customStartDate;
-    _pickedEnd = widget.session.customEndDate;
-    _load();
+    _session = widget.session;
+    _applySessionState(_session);
+    _refreshSessionAndLoad();
+  }
+
+  void _applySessionState(BrewSession s) {
+    _from = s.effectiveStart;
+    _to = s.effectiveEnd;
+    _pickedStart = s.customStartDate;
+    _pickedEnd = s.customEndDate;
+  }
+
+  /// Holt die Session frisch aus der DB (custom_*_date können sich seit
+  /// dem Listen-Snapshot geändert haben), dann lädt die Telemetrie.
+  Future<void> _refreshSessionAndLoad() async {
+    try {
+      final repo = ref.read(raptRepositoryProvider);
+      final fresh = await repo.fetchSession(widget.session.profileId);
+      if (fresh != null && mounted) {
+        setState(() {
+          _session = fresh;
+          _applySessionState(fresh);
+        });
+      }
+    } catch (_) {}
+    await _load();
   }
 
   Future<void> _load() async {
@@ -99,21 +121,15 @@ class _BrewSessionDetailsPageState
 
   Future<void> _apply() async {
     final repo = ref.read(raptRepositoryProvider);
-    await repo.updateCustomDates(widget.session.profileId,
+    await repo.updateCustomDates(_session.profileId,
         customStart: _pickedStart, customEnd: _pickedEnd);
-    await _load();
+    await _refreshSessionAndLoad();
   }
 
   Future<void> _reset() async {
     final repo = ref.read(raptRepositoryProvider);
-    await repo.updateCustomDates(widget.session.profileId, customStart: null, customEnd: null);
-    setState(() {
-      _pickedStart = null;
-      _pickedEnd = null;
-      _from = widget.session.startDate;
-      _to = widget.session.endDate;
-    });
-    await _load();
+    await repo.updateCustomDates(_session.profileId, customStart: null, customEnd: null);
+    await _refreshSessionAndLoad();
   }
 
   bool get _isActive {

@@ -58,6 +58,13 @@ class RaptRepository {
     }).eq('profile_id', profileId);
   }
 
+  Future<BrewSession?> fetchSession(String profileId) async {
+    final rows = await _t('brew_sessions').select().eq('profile_id', profileId);
+    final list = rows as List;
+    if (list.isEmpty) return null;
+    return BrewSession.fromJson(list.first as Map<String, dynamic>);
+  }
+
   // ---------------------------------------------------------------------------
   // Telemetrie (per Sud, also nach profile_id + Zeitraum)
   // ---------------------------------------------------------------------------
