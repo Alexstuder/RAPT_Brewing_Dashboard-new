@@ -115,7 +115,9 @@ class RaptRepository {
         UnifiedTelemetryPoint(
           createdOn: h.ts,
           temperature: h.temperature,
-          gravity: h.gravity,
+          // RAPT API liefert Gravity als *1000 Werte (z.B. 1052.7 statt 1.0527).
+          // normalizeGravity teilt Werte >500 durch 1000 → echter SG-Wert.
+          gravity: UnifiedTelemetryPoint.normalizeGravity(h.gravity),
           battery: h.battery,
         ),
     ]..sort((a, b) => a.createdOn.compareTo(b.createdOn));
