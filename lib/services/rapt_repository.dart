@@ -132,6 +132,21 @@ class RaptRepository {
   }
 
   // ---------------------------------------------------------------------------
+  // User Profile (single-user jetzt, multi-user-ready)
+  // ---------------------------------------------------------------------------
+
+  Future<UserProfile?> fetchUserProfile({String id = 'default'}) async {
+    final rows = await _t('user_profiles').select().eq('id', id);
+    final list = rows as List;
+    if (list.isEmpty) return null;
+    return UserProfile.fromJson(list.first as Map<String, dynamic>);
+  }
+
+  Future<void> upsertUserProfile(UserProfile p) async {
+    await _t('user_profiles').upsert(p.toJson());
+  }
+
+  // ---------------------------------------------------------------------------
   // Devices (Stammdaten — Controller + Hydrometer)
   // ---------------------------------------------------------------------------
 

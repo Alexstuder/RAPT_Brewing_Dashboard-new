@@ -82,6 +82,54 @@ class HydrometerTelemetryPoint {
       );
 }
 
+class UserProfile {
+  final String id;
+  final String name;
+  final String? avatarBlob;
+  final double? defaultBatchLiters;
+  final String? raptUserId;
+  final String? raptApiKey;
+  final String? brewfatherUserId;
+  final String? brewfatherApiKey;
+  final bool brewfatherSyncEnabled;
+
+  UserProfile({
+    required this.id,
+    required this.name,
+    this.avatarBlob,
+    this.defaultBatchLiters,
+    this.raptUserId,
+    this.raptApiKey,
+    this.brewfatherUserId,
+    this.brewfatherApiKey,
+    this.brewfatherSyncEnabled = false,
+  });
+
+  factory UserProfile.fromJson(Map<String, dynamic> j) => UserProfile(
+        id: j['id'] as String,
+        name: (j['name'] as String?) ?? '',
+        avatarBlob: j['avatar_blob'] as String?,
+        defaultBatchLiters: (j['default_batch_liters'] as num?)?.toDouble(),
+        raptUserId: j['rapt_user_id'] as String?,
+        raptApiKey: j['rapt_api_key'] as String?,
+        brewfatherUserId: j['brewfather_user_id'] as String?,
+        brewfatherApiKey: j['brewfather_api_key'] as String?,
+        brewfatherSyncEnabled: (j['brewfather_sync_enabled'] as bool?) ?? false,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'avatar_blob': avatarBlob,
+        'default_batch_liters': defaultBatchLiters,
+        'rapt_user_id': raptUserId,
+        'rapt_api_key': raptApiKey,
+        'brewfather_user_id': brewfatherUserId,
+        'brewfather_api_key': brewfatherApiKey,
+        'brewfather_sync_enabled': brewfatherSyncEnabled,
+      };
+}
+
 class Device {
   final String raptId;
   final String name;
