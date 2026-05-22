@@ -48,25 +48,25 @@ class RaptRepository {
   }
 
   Future<void> updateCustomDates(
-    String profileId, {
+    String id, {
     DateTime? customStart,
     DateTime? customEnd,
   }) async {
     await _t('brew_sessions').update({
       'custom_start_date': customStart?.toUtc().toIso8601String(),
       'custom_end_date': customEnd?.toUtc().toIso8601String(),
-    }).eq('profile_id', profileId);
+    }).eq('id', id);
   }
 
-  Future<BrewSession?> fetchSession(String profileId) async {
-    final rows = await _t('brew_sessions').select().eq('profile_id', profileId);
+  Future<BrewSession?> fetchSession(String id) async {
+    final rows = await _t('brew_sessions').select().eq('id', id);
     final list = rows as List;
     if (list.isEmpty) return null;
     return BrewSession.fromJson(list.first as Map<String, dynamic>);
   }
 
   /// Erstellt eine manuelle BrewSession (ohne RAPT-Profil-Zuordnung).
-  /// profile_id wird intern als 'manual.<uuid>' gewählt damit's eindeutig ist.
+  /// profile_id = 'manual.<uuid>' damit Worker es nicht überschreibt.
   Future<BrewSession> createManualSession({
     required String name,
     required DateTime start,
@@ -74,15 +74,14 @@ class RaptRepository {
   }) async {
     final uuid = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
     final pid = 'manual.$uuid';
-    await _t('brew_sessions').insert({
+    final rows = await _t('brew_sessions').insert({
       'profile_id': pid,
       'name': name,
       'start_date': start.toUtc().toIso8601String(),
       'end_date': end.toUtc().toIso8601String(),
       'is_manual': true,
-    });
-    final fresh = await fetchSession(pid);
-    return fresh!;
+    }).select();
+    return BrewSession.fromJson((rows as List).first as Map<String, dynamic>);
   }
 
   /// Phasen aus der Telemetrie: pro profile_id (inkl. NULL) MIN/MAX + Anzahl Punkte.
@@ -104,6 +103,7 @@ class RaptRepository {
         deviceId: m['device_id'] as String,
         profileId: m['profile_id'] as String?,
         profileName: m['profile_name'] as String?,
+        sessionIndex: (m['session_index'] as num?)?.toInt() ?? 1,
         firstSeen: DateTime.parse(m['first_seen'] as String),
         lastSeen: DateTime.parse(m['last_seen'] as String),
         pointCount: (m['point_count'] as num).toInt(),

@@ -18,7 +18,21 @@ class _DeviceDetailsPageState extends ConsumerState<DeviceDetailsPage> {
   bool _loading = true;
   String? _error;
   List<DeviceActivityPhase> _phases = [];
-  Map<String, BrewSession> _sessionsByPid = {};
+  List<BrewSession> _sessions = [];
+
+  /// Findet die brew_session zu einer Activity-Phase: gleiche profile_id +
+  /// start_date nah dran (±1 Tag). Gibt null zurück wenn keine passende
+  /// Session existiert (z.B. weil noch nicht synced).
+  BrewSession? _matchSession(DeviceActivityPhase p) {
+    if (p.profileId == null) return null;
+    for (final s in _sessions) {
+      if (s.profileId == p.profileId &&
+          s.startDate.difference(p.firstSeen).abs() < const Duration(days: 1)) {
+        return s;
+      }
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -43,7 +57,7 @@ class _DeviceDetailsPageState extends ConsumerState<DeviceDetailsPage> {
       if (!mounted) return;
       setState(() {
         _phases = phases;
-        _sessionsByPid = {for (final s in sessions) s.profileId: s};
+        _sessions = sessions;
         _loading = false;
       });
     } catch (e) {
@@ -164,7 +178,7 @@ class _DeviceDetailsPageState extends ConsumerState<DeviceDetailsPage> {
     final durStr = days > 0 ? '${days}d ${hours}h' : '${dur.inHours}h';
 
     final hasProfile = p.profileId != null;
-    final session = hasProfile ? _sessionsByPid[p.profileId!] : null;
+    final session = _matchSession(p);
     final hasName = (p.profileName != null && p.profileName!.isNotEmpty);
 
     Color color;

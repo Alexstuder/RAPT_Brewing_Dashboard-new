@@ -48,7 +48,7 @@ class _BrewSessionDetailsPageState
   Future<void> _refreshSessionAndLoad() async {
     try {
       final repo = ref.read(raptRepositoryProvider);
-      final fresh = await repo.fetchSession(widget.session.profileId);
+      final fresh = await repo.fetchSession(widget.session.id);
       if (fresh != null && mounted) {
         setState(() {
           _session = fresh;
@@ -125,14 +125,14 @@ class _BrewSessionDetailsPageState
 
   Future<void> _apply() async {
     final repo = ref.read(raptRepositoryProvider);
-    await repo.updateCustomDates(_session.profileId,
+    await repo.updateCustomDates(_session.id,
         customStart: _pickedStart, customEnd: _pickedEnd);
     await _refreshSessionAndLoad();
   }
 
   Future<void> _reset() async {
     final repo = ref.read(raptRepositoryProvider);
-    await repo.updateCustomDates(_session.profileId, customStart: null, customEnd: null);
+    await repo.updateCustomDates(_session.id, customStart: null, customEnd: null);
     await _refreshSessionAndLoad();
   }
 

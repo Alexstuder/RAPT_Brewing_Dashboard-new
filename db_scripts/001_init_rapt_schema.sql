@@ -96,9 +96,11 @@ SELECT create_hypertable('rapt.telemetry_hydrometers', 'created_on', if_not_exis
 -- ----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS rapt.brew_sessions (
-  profile_id         text PRIMARY KEY,        -- RAPT-Profile-UUID, oder 'manual.<uuid>' für manuelle Sessions
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id         text,                    -- RAPT-Profile-UUID; mehrere Sessions pro Profile möglich (Gap-Split)
+                                              -- 'manual.<uuid>' für manuelle Sessions
   name               text NOT NULL,
-  start_date         timestamptz NOT NULL,    -- bei auto: aus Telemetrie abgeleitet; bei manual: user-input
+  start_date         timestamptz NOT NULL,    -- bei auto: gap-detected per profile_id; bei manual: user-input
   end_date           timestamptz NOT NULL,
   custom_start_date  timestamptz,             -- User-Override
   custom_end_date    timestamptz,             -- User-Override
@@ -107,6 +109,8 @@ CREATE TABLE IF NOT EXISTS rapt.brew_sessions (
   is_manual          boolean DEFAULT false,   -- true = vom User erstellt (Worker fasst sie nicht an)
   updated_at         timestamptz NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_brew_sessions_profile_start
+  ON rapt.brew_sessions (profile_id, start_date);
 
 -- ----------------------------------------------------------------------------
 -- Indizes für typische Queries

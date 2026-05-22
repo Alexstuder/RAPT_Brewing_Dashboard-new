@@ -1,5 +1,6 @@
 class BrewSession {
-  final String profileId;
+  final String id;                             // uuid PK
+  final String? profileId;                     // RAPT-Profile (kann sich für mehrere Sessions wiederholen) oder 'manual.<uuid>'
   final String name;
   final DateTime startDate;
   final DateTime endDate;
@@ -10,7 +11,8 @@ class BrewSession {
   final bool isManual;
 
   BrewSession({
-    required this.profileId,
+    required this.id,
+    this.profileId,
     required this.name,
     required this.startDate,
     required this.endDate,
@@ -25,7 +27,8 @@ class BrewSession {
   DateTime get effectiveEnd => customEndDate ?? endDate;
 
   factory BrewSession.fromJson(Map<String, dynamic> j) => BrewSession(
-        profileId: j['profile_id'] as String,
+        id: j['id'] as String,
+        profileId: j['profile_id'] as String?,
         name: (j['name'] as String?) ?? '(unbenannt)',
         startDate: DateTime.parse(j['start_date'] as String),
         endDate: DateTime.parse(j['end_date'] as String),
@@ -46,6 +49,7 @@ class DeviceActivityPhase {
   final String deviceId;
   final String? profileId;   // null = unzugeordnet
   final String? profileName;
+  final int sessionIndex;    // 1,2,3 falls Profile mit Gap mehrfach genutzt
   final DateTime firstSeen;
   final DateTime lastSeen;
   final int pointCount;
@@ -54,6 +58,7 @@ class DeviceActivityPhase {
     required this.deviceId,
     this.profileId,
     this.profileName,
+    required this.sessionIndex,
     required this.firstSeen,
     required this.lastSeen,
     required this.pointCount,
