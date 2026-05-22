@@ -96,14 +96,15 @@ SELECT create_hypertable('rapt.telemetry_hydrometers', 'created_on', if_not_exis
 -- ----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS rapt.brew_sessions (
-  profile_id         text PRIMARY KEY,
+  profile_id         text PRIMARY KEY,        -- RAPT-Profile-UUID, oder 'manual.<uuid>' für manuelle Sessions
   name               text NOT NULL,
-  start_date         timestamptz NOT NULL,    -- aus Telemetrie abgeleitet (erster Datenpunkt)
-  end_date           timestamptz NOT NULL,    -- aus Telemetrie abgeleitet (letzter Datenpunkt)
+  start_date         timestamptz NOT NULL,    -- bei auto: aus Telemetrie abgeleitet; bei manual: user-input
+  end_date           timestamptz NOT NULL,
   custom_start_date  timestamptz,             -- User-Override
   custom_end_date    timestamptz,             -- User-Override
   temp_key           text,
   is_hydrometer_only boolean,
+  is_manual          boolean DEFAULT false,   -- true = vom User erstellt (Worker fasst sie nicht an)
   updated_at         timestamptz NOT NULL DEFAULT now()
 );
 

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../models/brew_session.dart';
 import '../services/rapt_repository.dart';
+import 'device_details_page.dart';
 
 class DevicesPage extends ConsumerStatefulWidget {
   const DevicesPage({super.key});
@@ -86,8 +87,14 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold)),
                         subtitle: Text(
-                            '${d.kind}  ${d.lastSeen != null ? '· last seen ${df.format(d.lastSeen!)}' : ''}',
+                            '${d.kind}  ${d.lastSeen != null ? '· last seen ${df.format(d.lastSeen!.toLocal())}' : ''}',
                             style: const TextStyle(color: Colors.white60)),
+                        trailing: const Icon(Icons.arrow_forward_ios,
+                            size: 14, color: Colors.white38),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => DeviceDetailsPage(device: d)),
+                        ),
                       ),
                     );
                   },

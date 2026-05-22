@@ -65,21 +65,71 @@ class RaptRepository {
     return BrewSession.fromJson(list.first as Map<String, dynamic>);
   }
 
+  /// Erstellt eine manuelle BrewSession (ohne RAPT-Profil-Zuordnung).
+  /// profile_id wird intern als 'manual.<uuid>' gewählt damit's eindeutig ist.
+  Future<BrewSession> createManualSession({
+    required String name,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final uuid = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+    final pid = 'manual.$uuid';
+    await _t('brew_sessions').insert({
+      'profile_id': pid,
+      'name': name,
+      'start_date': start.toUtc().toIso8601String(),
+      'end_date': end.toUtc().toIso8601String(),
+      'is_manual': true,
+    });
+    final fresh = await fetchSession(pid);
+    return fresh!;
+  }
+
+  /// Phasen aus der Telemetrie: pro profile_id (inkl. NULL) MIN/MAX + Anzahl Punkte.
+  /// Für die DeviceDetailsPage — zeigt was im Controller alles drin war,
+  /// auch unzugeordnete Phasen.
+  Future<List<DeviceActivityPhase>> fetchControllerActivity(String deviceId) async {
+    // PostgREST kann GROUP BY nicht direkt, aber mit RPC-Funktion oder mit
+    // einem View. Workaround: holen wir distinct profile_ids + min/max einzeln.
+    // Einfacher: einen kleinen SQL-View einmal anlegen — siehe device_activity.
+    final rows = await _client
+        .schema('rapt')
+        .from('device_activity_controllers')
+        .select()
+        .eq('device_id', deviceId)
+        .order('last_seen', ascending: false);
+    return (rows as List).map((r) {
+      final m = r as Map<String, dynamic>;
+      return DeviceActivityPhase(
+        deviceId: m['device_id'] as String,
+        profileId: m['profile_id'] as String?,
+        profileName: m['profile_name'] as String?,
+        firstSeen: DateTime.parse(m['first_seen'] as String),
+        lastSeen: DateTime.parse(m['last_seen'] as String),
+        pointCount: (m['point_count'] as num).toInt(),
+      );
+    }).toList();
+  }
+
   // ---------------------------------------------------------------------------
   // Telemetrie (per Sud, also nach profile_id + Zeitraum)
   // ---------------------------------------------------------------------------
 
+  /// [profileId] = null → keine Profile-Filterung (für manuelle Sessions oder
+  /// Zeitbereiche ohne Profile-Zuordnung in der Telemetrie).
   Future<List<ControllerTelemetryPoint>> fetchControllerTelemetry({
-    required String profileId,
+    String? profileId,
     required DateTime from,
     required DateTime to,
   }) async {
-    final rows = await _t('telemetry_controllers')
+    var q = _t('telemetry_controllers')
         .select('created_on, temperature, target_temperature, profile_id')
-        .eq('profile_id', profileId)
         .gte('created_on', from.toUtc().toIso8601String())
-        .lte('created_on', to.toUtc().toIso8601String())
-        .order('created_on', ascending: true);
+        .lte('created_on', to.toUtc().toIso8601String());
+    if (profileId != null) {
+      q = q.eq('profile_id', profileId);
+    }
+    final rows = await q.order('created_on', ascending: true);
     return (rows as List)
         .map((r) => ControllerTelemetryPoint.fromJson(r as Map<String, dynamic>))
         .toList();
@@ -104,8 +154,10 @@ class RaptRepository {
   /// Mergt Controller- und Hydrometer-Telemetrie zu vereinheitlichten
   /// Datenpunkten (chronologisch sortiert), wie sie der TelemetryProcessor /
   /// die RaptTelemetryView erwartet.
+  /// [profileId] = null → keine Profile-Filterung beim Controller (für manuelle
+  /// Sessions). Hydrometer hat keine profile_id-Spalte, also immer Date-only.
   Future<List<UnifiedTelemetryPoint>> fetchUnifiedTelemetry({
-    required String profileId,
+    String? profileId,
     required DateTime from,
     required DateTime to,
   }) async {

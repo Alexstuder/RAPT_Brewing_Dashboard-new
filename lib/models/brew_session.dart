@@ -7,6 +7,7 @@ class BrewSession {
   final DateTime? customEndDate;
   final String? tempKey;
   final bool? isHydrometerOnly;
+  final bool isManual;
 
   BrewSession({
     required this.profileId,
@@ -17,6 +18,7 @@ class BrewSession {
     this.customEndDate,
     this.tempKey,
     this.isHydrometerOnly,
+    this.isManual = false,
   });
 
   DateTime get effectiveStart => customStartDate ?? startDate;
@@ -35,7 +37,27 @@ class BrewSession {
             : DateTime.parse(j['custom_end_date'] as String),
         tempKey: j['temp_key'] as String?,
         isHydrometerOnly: j['is_hydrometer_only'] as bool?,
+        isManual: (j['is_manual'] as bool?) ?? false,
       );
+}
+
+/// Aggregierte Telemetrie-Phase aus device_activity Sicht.
+class DeviceActivityPhase {
+  final String deviceId;
+  final String? profileId;   // null = unzugeordnet
+  final String? profileName;
+  final DateTime firstSeen;
+  final DateTime lastSeen;
+  final int pointCount;
+
+  DeviceActivityPhase({
+    required this.deviceId,
+    this.profileId,
+    this.profileName,
+    required this.firstSeen,
+    required this.lastSeen,
+    required this.pointCount,
+  });
 }
 
 class ControllerTelemetryPoint {

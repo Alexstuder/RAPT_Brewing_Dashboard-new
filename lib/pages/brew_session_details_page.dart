@@ -66,8 +66,10 @@ class _BrewSessionDetailsPageState
     });
     try {
       final repo = ref.read(raptRepositoryProvider);
+      // Bei manuellen Sessions kein Profile-Filter (telemetry hat dort keine
+      // profile_id). Bei Auto-Sessions: filtert auf den RAPT profile_id.
       final pts = await repo.fetchUnifiedTelemetry(
-        profileId: widget.session.profileId,
+        profileId: _session.isManual ? null : _session.profileId,
         from: _from,
         to: _to,
       );
