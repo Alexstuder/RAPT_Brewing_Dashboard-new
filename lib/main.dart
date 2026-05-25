@@ -6,7 +6,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'pages/auth_page.dart';
 import 'pages/landing_page.dart';
+import 'utils/cookie_session_storage.dart';
 import 'utils/env_config.dart';
+import 'utils/session_sync_widget.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,9 +19,14 @@ Future<void> main() async {
     url: EnvConfig.supabaseUrl(),
     anonKey: EnvConfig.supabaseAnonKey(),
     postgrestOptions: const PostgrestClientOptions(schema: 'rapt'),
+    authOptions: FlutterAuthClientOptions(localStorage: CookieSessionStorage()),
   );
 
-  runApp(const ProviderScope(child: RaptDashboardApp()));
+  runApp(
+    const ProviderScope(
+      child: SessionSyncWidget(child: RaptDashboardApp()),
+    ),
+  );
 }
 
 class RaptDashboardApp extends StatelessWidget {

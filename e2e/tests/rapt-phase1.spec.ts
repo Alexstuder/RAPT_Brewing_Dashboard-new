@@ -115,8 +115,8 @@ test.describe('S1: Auth-Gate — unauthenticated → Login page', () => {
     await waitForFlutter(page);
 
     // Fill login form
-    await page.getByLabel('E-Mail').fill(TEST_EMAIL);
-    await page.getByLabel('Passwort').fill(TEST_PASSWORD);
+    await page.getByRole('textbox', { name: 'E-Mail' }).fill(TEST_EMAIL);
+    await page.getByRole('textbox', { name: 'Passwort' }).fill(TEST_PASSWORD);
     await page.getByRole('button', { name: /Anmelden/ }).click();
 
     // Landing page must appear
