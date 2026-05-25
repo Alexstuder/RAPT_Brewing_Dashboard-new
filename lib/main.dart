@@ -1,14 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:web/web.dart' as web;
 
 import 'pages/auth_page.dart';
 import 'pages/landing_page.dart';
-import 'utils/cookie_session_storage.dart';
 import 'utils/env_config.dart';
-import 'utils/session_sync_widget.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,14 +21,82 @@ Future<void> main() async {
     url: EnvConfig.supabaseUrl(),
     anonKey: EnvConfig.supabaseAnonKey(),
     postgrestOptions: const PostgrestClientOptions(schema: 'rapt'),
-    authOptions: FlutterAuthClientOptions(localStorage: CookieSessionStorage()),
   );
+
+  // SSO-Ticket einlösen, falls das URL-Fragment `sso=<ticket>` enthält.
+  await _redeemSsoTicketIfPresent();
 
   runApp(
     const ProviderScope(
-      child: SessionSyncWidget(child: RaptDashboardApp()),
+      child: RaptDashboardApp(),
     ),
   );
+}
+
+/// Parst das URL-Fragment nach `sso=<ticket>`. Gibt null zurück wenn keines vorhanden.
+String? _extractSsoTicket() {
+  final fragment = Uri.base.fragment;
+  if (fragment.isEmpty) return null;
+  final params = Uri.splitQueryString(fragment);
+  final ticket = params['sso'];
+  return (ticket != null && ticket.isNotEmpty) ? ticket : null;
+}
+
+/// Entfernt das Fragment aus der Browser-URL (kein Reload, kein History-Eintrag).
+void _clearFragment() {
+  try {
+    final url = '${web.window.location.pathname}${web.window.location.search}';
+    web.window.history.replaceState(null, '', url);
+  } catch (e) {
+    debugPrint('SSO: Fragment-Clearing fehlgeschlagen: $e');
+  }
+}
+
+/// Löst das SSO-Ticket über den rapt-Proxy ein und setzt die Supabase-Session.
+/// Wird nur aufgerufen wenn ein Ticket im Fragment vorhanden und noch keine
+/// Session aktiv ist.
+Future<void> _redeemSsoTicketIfPresent() async {
+  final ticket = _extractSsoTicket();
+  if (ticket == null) return;
+
+  // Fragment immer entfernen — egal ob Redeem erfolgreich oder nicht.
+  _clearFragment();
+
+  // Kein Doppel-Redeem wenn bereits eingeloggt.
+  final auth = Supabase.instance.client.auth;
+  if (auth.currentSession != null) {
+    debugPrint('SSO: Session bereits vorhanden — Ticket verworfen.');
+    return;
+  }
+
+  debugPrint('SSO: Löse Ticket ein …');
+  try {
+    final uri = Uri.parse('${EnvConfig.proxyUrl()}/sso/redeem');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'ticket': ticket}),
+    );
+
+    if (response.statusCode != 200) {
+      debugPrint('SSO: Redeem fehlgeschlagen (HTTP ${response.statusCode}) — normaler Login-Flow.');
+      return;
+    }
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final refreshToken = body['refresh_token'] as String?;
+    final accessToken = body['access_token'] as String?;
+
+    if (refreshToken == null || refreshToken.isEmpty) {
+      debugPrint('SSO: Proxy-Antwort enthält keinen refresh_token — normaler Login-Flow.');
+      return;
+    }
+
+    await auth.setSession(refreshToken, accessToken: accessToken);
+    debugPrint('SSO: Session erfolgreich gesetzt.');
+  } catch (e) {
+    debugPrint('SSO: Redeem-Fehler: $e — normaler Login-Flow.');
+  }
 }
 
 class RaptDashboardApp extends StatelessWidget {
