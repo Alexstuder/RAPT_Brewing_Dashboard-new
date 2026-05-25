@@ -70,7 +70,7 @@ class RaptRepository {
   }
 
   /// Erstellt eine manuelle BrewSession (ohne RAPT-Profil-Zuordnung).
-  /// profile_id = 'manual.<uuid>' damit Worker es nicht überschreibt.
+  /// profile_id = 'manual.&lt;uuid&gt;' damit Worker es nicht überschreibt.
   /// Stempelt owner = auth.uid() damit die RLS WITH CHECK Policy greift.
   Future<BrewSession> createManualSession({
     required String name,

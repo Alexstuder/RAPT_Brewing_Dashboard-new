@@ -254,7 +254,7 @@ class _DeviceDetailsPageState extends ConsumerState<DeviceDetailsPage> {
                   ],
                 ),
               ),
-              if (action != null) action,
+              ?action,
               if (session != null)
                 const Icon(Icons.arrow_forward_ios,
                     size: 14, color: Colors.white38),

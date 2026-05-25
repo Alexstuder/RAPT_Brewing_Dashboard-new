@@ -39,7 +39,7 @@ class RaptTelemetryView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             if (!(hideInactiveStatus && !isActive)) _statusBadge(isActive),
-            if (headerActions != null) headerActions!,
+            ?headerActions,
           ],
         ),
         const SizedBox(height: 16),

@@ -83,7 +83,7 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
                   : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: _devices.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, i) {
                     final d = _devices[i];
                     return Card(

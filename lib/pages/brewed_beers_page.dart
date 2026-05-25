@@ -84,7 +84,7 @@ class _BrewedBeersPageState extends ConsumerState<BrewedBeersPage> {
                   : ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: _sessions.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (context, i) {
                         final s = _sessions[i];
                         final df = DateFormat('dd.MM.yyyy HH:mm');
