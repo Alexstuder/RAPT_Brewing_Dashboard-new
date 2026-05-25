@@ -47,6 +47,10 @@ class RaptRepository {
     return end.isAfter(DateTime.now().subtract(const Duration(hours: 24)));
   }
 
+  /// Aktualisiert Custom-Dates einer brew_session.
+  /// owner wird NICHT im Update-Map gesetzt: die RLS USING-Policy
+  /// (owner = auth.uid()) macht fremde Rows für diesen Update unsichtbar
+  /// (Update trifft 0 Rows statt fremde zu ändern). owner bleibt unverändert.
   Future<void> updateCustomDates(
     String id, {
     DateTime? customStart,
@@ -67,11 +71,19 @@ class RaptRepository {
 
   /// Erstellt eine manuelle BrewSession (ohne RAPT-Profil-Zuordnung).
   /// profile_id = 'manual.<uuid>' damit Worker es nicht überschreibt.
+  /// Stempelt owner = auth.uid() damit die RLS WITH CHECK Policy greift.
   Future<BrewSession> createManualSession({
     required String name,
     required DateTime start,
     required DateTime end,
   }) async {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) {
+      throw StateError(
+        'createManualSession: kein eingeloggter User — '
+        'bitte zuerst anmelden.',
+      );
+    }
     final uuid = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
     final pid = 'manual.$uuid';
     final rows = await _t('brew_sessions').insert({
@@ -80,6 +92,7 @@ class RaptRepository {
       'start_date': start.toUtc().toIso8601String(),
       'end_date': end.toUtc().toIso8601String(),
       'is_manual': true,
+      'owner': uid,
     }).select();
     return BrewSession.fromJson((rows as List).first as Map<String, dynamic>);
   }

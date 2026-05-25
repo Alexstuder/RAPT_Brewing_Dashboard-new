@@ -161,7 +161,17 @@ class _DeviceDetailsPageState extends ConsumerState<DeviceDetailsPage> {
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold)),
                       ),
-                      ..._phases.map((p) => _phaseTile(p, df)),
+                      if (_phases.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Text(
+                            'Noch keine Aktivität für dieses Gerät.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        )
+                      else
+                        ..._phases.map((p) => _phaseTile(p, df)),
                       const SizedBox(height: 80), // unter dem FAB
                     ],
                   ],

@@ -55,7 +55,10 @@ class _BrewSessionDetailsPageState
           _applySessionState(fresh);
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('refreshSession failed: $e');
+    }
+    if (!mounted) return;
     await _load();
   }
 
@@ -127,12 +130,14 @@ class _BrewSessionDetailsPageState
     final repo = ref.read(raptRepositoryProvider);
     await repo.updateCustomDates(_session.id,
         customStart: _pickedStart, customEnd: _pickedEnd);
+    if (!mounted) return;
     await _refreshSessionAndLoad();
   }
 
   Future<void> _reset() async {
     final repo = ref.read(raptRepositoryProvider);
     await repo.updateCustomDates(_session.id, customStart: null, customEnd: null);
+    if (!mounted) return;
     await _refreshSessionAndLoad();
   }
 

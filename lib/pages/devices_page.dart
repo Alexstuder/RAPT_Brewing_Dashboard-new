@@ -68,7 +68,19 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
                         style: const TextStyle(color: Colors.redAccent)),
                   ),
                 )
-              : ListView.separated(
+              : _devices.isEmpty
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Text(
+                          'Noch keine Geräte. Hinterlege deinen RAPT-Key im Profil — '
+                          'der Sync holt deine Geräte dann automatisch.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white54),
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: _devices.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),

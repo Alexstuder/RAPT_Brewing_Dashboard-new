@@ -72,10 +72,13 @@ class _BrewedBeersPageState extends ConsumerState<BrewedBeersPage> {
                 )
               : _sessions.isEmpty
                   ? const Center(
-                      child: Text(
-                        'Noch keine Sude in der Datenbank.\nbrew-proxy synct alle 5 Min.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white54),
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Text(
+                          'Noch keine Sude. Sobald dein RAPT-Sync läuft, erscheinen deine Biere hier.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white54),
+                        ),
                       ),
                     )
                   : ListView.separated(
