@@ -114,14 +114,16 @@ class UserProfile {
   final String name;
   final String? avatarBlob;
   final String? raptUserId;
-  final String? raptApiKey;
+  /// True when a RAPT API key is stored in the vault. The key itself is never
+  /// returned to the client — only this flag is readable via the profile row.
+  final bool raptConfigured;
 
   UserProfile({
     required this.id,
     required this.name,
     this.avatarBlob,
     this.raptUserId,
-    this.raptApiKey,
+    this.raptConfigured = false,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> j) => UserProfile(
@@ -129,15 +131,16 @@ class UserProfile {
         name: (j['name'] as String?) ?? '',
         avatarBlob: j['avatar_blob'] as String?,
         raptUserId: j['rapt_user_id'] as String?,
-        raptApiKey: j['rapt_api_key'] as String?,
+        raptConfigured: (j['rapt_configured'] as bool?) ?? false,
       );
 
+  /// Only non-secret profile fields. `rapt_user_id` / RAPT API key are
+  /// written exclusively via the `set_my_rapt_creds` RPC so they are never
+  /// accidentally nulled out by a plain profile upsert.
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
         'avatar_blob': avatarBlob,
-        'rapt_user_id': raptUserId,
-        'rapt_api_key': raptApiKey,
       };
 }
 

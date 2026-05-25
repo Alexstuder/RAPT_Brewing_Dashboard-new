@@ -184,18 +184,43 @@ class RaptRepository {
   }
 
   // ---------------------------------------------------------------------------
-  // User Profile (single-user jetzt, multi-user-ready)
+  // User Profile (multi-tenant — reads own row via auth.uid() + RLS)
   // ---------------------------------------------------------------------------
 
-  Future<UserProfile?> fetchUserProfile({String id = 'default'}) async {
-    final rows = await _t('user_profiles').select().eq('id', id);
-    final list = rows as List;
-    if (list.isEmpty) return null;
-    return UserProfile.fromJson(list.first as Map<String, dynamic>);
+  /// Loads the profile row for the currently signed-in user.
+  /// RLS enforces that only the owner's row is returned; a plain
+  /// .maybeSingle() without an explicit eq() is therefore sufficient,
+  /// but we also add the eq() for defence-in-depth and clarity.
+  Future<UserProfile?> fetchUserProfile() async {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return null;
+    final row = await _t('user_profiles')
+        .select()
+        .eq('id', uid)
+        .maybeSingle();
+    if (row == null) return null;
+    return UserProfile.fromJson(row);
   }
 
+  /// Saves the non-secret profile fields (name, avatar_blob) via a plain
+  /// upsert. The RAPT API key is NOT written here — use [setRaptCreds].
   Future<void> upsertUserProfile(UserProfile p) async {
     await _t('user_profiles').upsert(p.toJson());
+  }
+
+  /// Writes (or clears) RAPT credentials via the `rapt.set_my_rapt_creds`
+  /// RPC. The API key is stored encrypted in the vault — never in a
+  /// client-readable column.
+  ///
+  /// Pass [apiKey] as null or empty string to clear the stored key.
+  Future<void> setRaptCreds(String raptUserId, String? apiKey) async {
+    await _client.schema('rapt').rpc(
+      'set_my_rapt_creds',
+      params: {
+        'p_rapt_user_id': raptUserId,
+        'p_api_key': (apiKey?.isEmpty ?? true) ? null : apiKey,
+      },
+    );
   }
 
   // ---------------------------------------------------------------------------

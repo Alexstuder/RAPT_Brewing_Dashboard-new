@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/rapt_repository.dart';
 import 'brewed_beers_page.dart';
@@ -27,12 +28,26 @@ class _LandingPageState extends ConsumerState<LandingPage> {
       final repo = ref.read(raptRepositoryProvider);
       final brewing = await repo.isBrewing();
       if (mounted) setState(() => _isBrewing = brewing);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('LandingPage: isBrewing check failed: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('RAPT Brewing'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Abmelden',
+            onPressed: () => Supabase.instance.client.auth.signOut(),
+          ),
+        ],
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -50,8 +65,11 @@ class _LandingPageState extends ConsumerState<LandingPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.water_drop_outlined,
-                    size: 80, color: Color(0xFF2563EB)),
+                Icon(
+                  Icons.water_drop_outlined,
+                  size: 80,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(height: 24),
                 Text(
                   'RAPT Brewing',
@@ -70,7 +88,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                 const SizedBox(height: 16),
                 if (_isBrewing)
                   _LandingButton(
-                    title: 'Currently Brewing',
+                    title: 'Aktiver Sud',
                     icon: Icons.timer_outlined,
                     onPressed: () async {
                       final repo = ref.read(raptRepositoryProvider);
@@ -85,14 +103,14 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                   ),
                 if (_isBrewing) const SizedBox(height: 16),
                 _LandingButton(
-                  title: 'User Profile',
+                  title: 'Profil',
                   icon: Icons.person_outline,
                   onPressed: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const UserProfilePage())),
                 ),
                 const SizedBox(height: 16),
                 _LandingButton(
-                  title: 'Devices',
+                  title: 'Geräte',
                   icon: Icons.device_thermostat,
                   onPressed: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const DevicesPage())),
